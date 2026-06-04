@@ -1,0 +1,17 @@
+# Ambientes virtuales
+venv/
+env/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDEs
+.vscode/
+.idea/
+
+# Archivos ignorados por petición del usuario
+modulos/autores.py
+datos/autores.json
