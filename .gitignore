@@ -3,7 +3,7 @@ venv/
 env/
 ENV/
 
-# Python cache
+# Python cache no deseado
 __pycache__/
 *.py[cod]
 *$py.class
