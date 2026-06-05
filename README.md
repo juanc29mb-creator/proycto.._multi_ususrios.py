@@ -1,5 +1,12 @@
 # Blog de Consola Multiusuario - Ejercicio 5
 
+Conformado por:juan carlos merchan,
+               Jhon mario guamanzar,
+               juan castañeda,
+               miguel castañeda.
+
+
+               
 Una aplicación de consola simplificada y estéticamente atractiva escrita en Python. Este proyecto permite gestionar publicaciones de un blog con un sistema de autores (registro e inicio de sesión), búsqueda mediante tags y la posibilidad de agregar comentarios a cada publicación.
 
 ## Características

@@ -140,7 +140,7 @@ def main():
             # La instrucción 'break' fractura el ciclo while, terminando elegantemente el software
             break
         else:
-            # Controlador de excepciones básicas por input no contemplado o fuera de lógica esperada
+            # Controlador de excepciones básicas por input no contemplado o fuera de lógica de permisos
             mostrar_info("Opción inválida o no disponible para tu nivel de acceso.")
 
         # Pausamos independientemente de lo que haya hecho para que lea los mensajes o las tablas antes de limpiar pantalla

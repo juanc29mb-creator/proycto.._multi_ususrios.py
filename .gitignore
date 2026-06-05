@@ -3,7 +3,7 @@ venv/
 env/
 ENV/
 
-# Python cache
+# Python cache no deseado
 __pycache__/
 *.py[cod]
 *$py.class
@@ -13,5 +13,3 @@ __pycache__/
 .idea/
 
 # Archivos ignorados por petición del usuario
-modulos/autores.py
-datos/autores.json

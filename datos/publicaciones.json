@@ -1,1 +1,14 @@
-[]
+[
+    {
+        "id_post": 1,
+        "id_autor": 1,
+        "titulo": "el ayeer del presente",
+        "contenido": "contenido c2",
+        "fecha_publicacion": "2026-06-04 20:13:37",
+        "tags": [
+            "#comedia",
+            "#risa"
+        ],
+        "comentarios": []
+    }
+]
