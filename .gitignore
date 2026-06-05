@@ -13,5 +13,3 @@ __pycache__/
 .idea/
 
 # Archivos ignorados por petición del usuario
-modulos/autores.py
-datos/autores.json
