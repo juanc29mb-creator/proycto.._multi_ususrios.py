@@ -15,8 +15,8 @@ from rich.prompt import Prompt
 console = Console()
 
 def limpiar_pantalla():
-    """Limpia la pantalla de la consola dependiendo del sistema operativo."""
-    # Ejecutamos 'cls' si estamos en Windows (nt), o 'clear' si estamos en Linux/Mac
+    """Limpia la pantalla de la consola"""
+    # Ejecutamos 'cls' si estamos en Windows (nt),
     os.system('cls' if os.name == 'nt' else 'clear')
 
 def mostrar_titulo(texto, subtitulo=None):
