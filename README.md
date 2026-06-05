@@ -1,9 +1,9 @@
 # Blog de Consola Multiusuario - Ejercicio 5
 
-Conformado por:juan carlos merchan
-               Jhon mario guamanzar
-               juan castañeda
-               miguel castañeda
+Conformado por:juan carlos merchan,
+               Jhon mario guamanzar,
+               juan castañeda,
+               miguel castañeda.
 
 
                
