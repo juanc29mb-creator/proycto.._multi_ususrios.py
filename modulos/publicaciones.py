@@ -1,243 +1,180 @@
-# Importamos datetime para estampar la fecha y hora en el momento exacto en el que se crea o comenta una publicación
-from datetime import datetime
-# Importamos funciones gráficas de la interfaz UI, requeridas para ver listas, entradas, errores y demás.
-from modulos.interfaz import mostrar_tabla_publicaciones, mostrar_publicacion_completa, leer_input, mostrar_error, mostrar_exito, mostrar_info
+from datetime import datetime  # Trae la clase datetime para usar fechas y horas en el código
+from modulos.interfaz import mostrar_tabla_publicaciones, mostrar_publicacion_completa, leer_input, mostrar_error, mostrar_exito, mostrar_info  # Trae las funciones que muestran datos en pantalla y leen entrada
 
+# Convierte una lista de autores a un diccionario donde la clave es el id de autor
+# y el valor es el nombre del autor. Esto facilita mostrar el nombre en lugar del id.
 def obtener_diccionario_autores(autores):
-    """Mapea la lista de diccionarios de autores en un formato de {id: nombre} para hacer búsquedas rápidas."""
-    # Usamos comprensión de diccionarios para agrupar rápidamente los ID de los autores y asociarlos con su nombre.
-    # Esto es útil al momento de mostrar tablas donde tenemos el ID_Autor pero queremos presentar su Nombre en pantalla
-    return {a.get("id_autor"): a.get("nombre_autor") for a in autores}
+    return {a.get("id_autor"): a.get("nombre_autor") for a in autores}  # Recorre cada autor y arma un mapa id->nombre
 
+
+# Intenta transformar el valor ingresado a un número entero.
+# Si el valor no es numérico, muestra un mensaje de error y devuelve None.
+def _parse_int(valor, mensaje_error):
+    try:
+        return int(valor)  # Convierte el texto a entero cuando es posible
+    except (TypeError, ValueError):
+        mostrar_error(mensaje_error)  # Muestra el mensaje de error enviado
+        return None  # Devuelve None para indicar que la conversión falló
+
+
+# Busca en la lista de publicaciones la que tenga el id_post solicitado.
+# Si la encuentra, la devuelve; si no, devuelve None.
+def _buscar_publicacion(publicaciones, id_post):
+    return next((p for p in publicaciones if p.get("id_post") == id_post), None)  # Devuelve la primera coincidencia o None
+
+
+# Convierte una cadena de tags separada por comas en una lista de tags limpia.
+# Quita espacios extras y descarta valores vacíos.
+def _leer_tags(tags_str):
+    return [t.strip() for t in (tags_str or "").split(",") if t.strip()]  # Divide la cadena y limpia cada tag
+
+
+# Pide al usuario los datos de la publicación y crea un nuevo objeto de publicación.
 def crear_publicacion(publicaciones, usuario_actual):
-    """Permite redactar un nuevo post y asignárselo al usuario autenticado."""
-    # Verificación de seguridad: no se puede publicar si es Modo Invitado
     if not usuario_actual:
-        mostrar_error("Debes iniciar sesión para crear una publicación.")
+        mostrar_error("Debes iniciar sesión para crear una publicación.")  # No permite crear publicación sin iniciar sesión
         return
 
-    # Pedimos los datos base de un post: Título, contenido y sus etiquetas (tags)
-    titulo = leer_input("Título de la publicación")
-    contenido = leer_input("Contenido")
-    # Los tags los solicitamos como una lista plana separada por comas
-    tags_str = leer_input("Tags (separados por coma)")
-    
-    # Transformamos el texto plano a lista: dividimos por las comas (.split) y quitamos los espacios laterales de cada palabra (.strip)
-    tags = [t.strip() for t in tags_str.split(",") if t.strip()]
+    titulo = leer_input("Título de la publicación")  # Lee el título de la publicación
+    contenido = leer_input("Contenido")  # Lee el contenido de la publicación
+    tags = _leer_tags(leer_input("Tags (separados por coma)"))  # Lee los tags y los transforma en una lista
+    nuevo_id = max((p.get("id_post", 0) for p in publicaciones), default=0) + 1  # Calcula el id siguiente usando el id más alto actual
 
-    # Calculamos automáticamente cuál será el ID para este nuevo post, empezando desde 1
-    nuevo_id = 1
-    if publicaciones:
-        # Si ya existen posts, buscamos el ID más alto existente y le sumamos 1
-        nuevo_id = max(p.get("id_post", 0) for p in publicaciones) + 1
+    publicaciones.append({
+        "id_post": nuevo_id,  # Guarda el nuevo id de la publicación
+        "id_autor": usuario_actual.get("id_autor"),  # Asigna el id del autor que creó la publicación
+        "titulo": titulo,  # Guarda el título ingresado por el usuario
+        "contenido": contenido,  # Guarda el contenido ingresado por el usuario
+        "fecha_publicacion": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # Guarda la fecha y hora actual en formato legible
+        "tags": tags,  # Guarda la lista de tags para esta publicación
+        "comentarios": [],  # Inicia la lista de comentarios vacía
+    })
+    mostrar_exito("Publicación creada con éxito.")  # Muestra mensaje de confirmación
 
-    # Construimos el diccionario del nuevo post
-    nueva_pub = {
-        "id_post": nuevo_id,
-        "id_autor": usuario_actual.get("id_autor"),  # El autor es quien ha iniciado sesión
-        "titulo": titulo,
-        "contenido": contenido,
-        "fecha_publicacion": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), # Generamos la fecha exacta del sistema
-        "tags": tags,
-        "comentarios": [] # Inicializamos la lista de comentarios vacía
-    }
 
-    # Adjuntamos el objeto a nuestra base de datos local (lista 'publicaciones')
-    publicaciones.append(nueva_pub)
-    mostrar_exito("Publicación creada con éxito.")
-
+# Muestra todas las publicaciones existentes con sus autores.
 def ver_todas_publicaciones(publicaciones, autores):
-    """Procesa e imprime la tabla de absolutamente todos los posts existentes."""
-    # Extraemos el diccionario id:nombre de todos los autores para poder mapearlos en pantalla
-    autores_dict = obtener_diccionario_autores(autores)
-    # Enviamos los datos directamente al módulo UI para ser renderizados
-    mostrar_tabla_publicaciones(publicaciones, autores_dict)
+    mostrar_tabla_publicaciones(publicaciones, obtener_diccionario_autores(autores))  # Llama a la interfaz para mostrar la tabla
 
+
+# Muestra solo las publicaciones de un autor específico.
 def ver_publicaciones_autor(publicaciones, autores):
-    """Permite filtrar los posts para mostrar únicamente los de un autor en particular."""
-    autores_dict = obtener_diccionario_autores(autores)
-    # Solicitamos el ID del autor objetivo como texto
-    id_str = leer_input("Ingresa el ID del autor")
-    
-    # Bloque para intentar convertir el texto del usuario a número (int)
-    try:
-        id_autor = int(id_str)
-    except ValueError:
-        # Si el usuario inserta letras o caracteres raros, marcamos error
-        mostrar_error("El ID debe ser un número entero.")
-        return
+    id_autor = _parse_int(leer_input("Ingresa el ID del autor"), "El ID debe ser un número entero.")  # Lee el id del autor y lo convierte a entero
+    if id_autor is None:
+        return  # Detiene la función si el id no es válido
 
-    # Creamos una lista filtrada solo con los posts donde 'id_autor' coincide con el introducido
-    pubs_autor = [p for p in publicaciones if p.get("id_autor") == id_autor]
-    
-    # Comprobamos si el autor no tiene publicaciones
+    pubs_autor = [p for p in publicaciones if p.get("id_autor") == id_autor]  # Filtra las publicaciones por id de autor
     if not pubs_autor:
-        mostrar_info("Este autor no tiene publicaciones o no existe.")
-    else:
-        # Mostramos los resultados
-        mostrar_tabla_publicaciones(pubs_autor, autores_dict)
+        mostrar_info("Este autor no tiene publicaciones o no existe.")  # Informa si no hay publicaciones para ese autor
+        return
 
+    mostrar_tabla_publicaciones(pubs_autor, obtener_diccionario_autores(autores))  # Muestra solo las publicaciones del autor encontrado
+
+
+# Busca publicaciones que tengan un tag específico escrito por el usuario.
 def buscar_por_tag(publicaciones, autores):
-    """Itera sobre cada tag de cada publicación buscando un término dado (ignorando mayúsculas/minúsculas)."""
-    autores_dict = obtener_diccionario_autores(autores)
-    # Pedimos la palabra y la forzamos a minúsculas usando .lower() para evitar falsos negativos en la búsqueda
-    tag_buscado = leer_input("Ingresa el tag a buscar").lower()
-    
-    # Usamos comprensión de listas para recuperar aquellas publicaciones cuya colección de 'tags' contenga la palabra buscada
-    pubs_filtradas = [p for p in publicaciones if tag_buscado in [t.lower() for t in p.get("tags", [])]]
-    
-    # Si la lista obtenida está vacía, no hay resultados para ese filtro
+    tag_buscado = leer_input("Ingresa el tag a buscar").lower()  # Lee el tag y lo pasa a minúscula para comparar
+    pubs_filtradas = [p for p in publicaciones if tag_buscado in [t.lower() for t in p.get("tags", [])]]  # Filtra por tags iguales sin importar mayúsculas/minúsculas
+
     if not pubs_filtradas:
-        mostrar_info(f"No se encontraron publicaciones con el tag '{tag_buscado}'.")
-    else:
-        # Imprimimos la tabla con los filtrados
-        mostrar_tabla_publicaciones(pubs_filtradas, autores_dict)
+        mostrar_info(f"No se encontraron publicaciones con el tag '{tag_buscado}'.")  # Informa si no hay coincidencias
+        return
 
+    mostrar_tabla_publicaciones(pubs_filtradas, obtener_diccionario_autores(autores))  # Muestra las publicaciones encontradas
+
+
+# Permite al autor modificar los datos de una publicación que ya existe.
 def modificar_publicacion(publicaciones, usuario_actual):
-    """Busca una publicación propiedad del autor y permite reemplazar su título, contenido o tags."""
     if not usuario_actual:
-        mostrar_error("Debes iniciar sesión para modificar una publicación.")
+        mostrar_error("Debes iniciar sesión para modificar una publicación.")  # No permite modificar sin iniciar sesión
         return
 
-    # Preguntamos cuál publicación se desea editar
-    id_str = leer_input("ID de la publicación a modificar")
-    # Validamos que se trate de un número entero
-    try:
-        id_post = int(id_str)
-    except ValueError:
-        mostrar_error("El ID debe ser numérico.")
-        return
+    id_post = _parse_int(leer_input("ID de la publicación a modificar"), "El ID debe ser numérico.")  # Lee el id de la publicación a modificar
+    if id_post is None:
+        return  # Detiene la función si el id no es válido
 
-    # Buscamos la publicación. next() recorre la lista y entrega el primer coincidente. Si no lo halla, entrega 'None'
-    pub = next((p for p in publicaciones if p.get("id_post") == id_post), None)
-
+    pub = _buscar_publicacion(publicaciones, id_post)  # Busca la publicación solicitada
     if not pub:
-        mostrar_error("Publicación no encontrada.")
+        mostrar_error("Publicación no encontrada.")  # Informa si no existe
         return
-
-    # Control Crítico: Aseguramos que la publicación que el usuario intenta editar REALMENTE pertenece a él
     if pub.get("id_autor") != usuario_actual.get("id_autor"):
-        mostrar_error("No tienes permiso para modificar esta publicación (no es tuya).")
+        mostrar_error("No tienes permiso para modificar esta publicación (no es tuya).")  # Verifica que solo el autor pueda modificarla
         return
 
-    # Importamos el objeto console para dar instrucciones visuales claras
-    from modulos.interfaz import console
-    console.print("Deja en blanco si no deseas modificar el campo.")
-    
-    # Pedimos los nuevos parámetros. Ponemos como referencia el valor que tenía antes (entre llaves)
-    nuevo_titulo = leer_input(f"Nuevo título (actual: {pub.get('titulo')})")
-    nuevo_contenido = leer_input("Nuevo contenido")
-    nuevos_tags_str = leer_input(f"Nuevos tags separados por coma (actual: {', '.join(pub.get('tags', []))})")
+    from modulos.interfaz import console  # Importa la consola de la interfaz para mostrar texto simple
+    console.print("Deja en blanco si no deseas modificar el campo.")  # Explica al usuario que puede dejar campos sin cambiar
 
-    # Si se escribió algo para reemplazar el Título, lo actualizamos
+    nuevo_titulo = leer_input(f"Nuevo título (actual: {pub.get('titulo')})")  # Pregunta por el nuevo título
+    nuevo_contenido = leer_input("Nuevo contenido")  # Pregunta por el nuevo contenido
+    nuevos_tags = _leer_tags(leer_input(f"Nuevos tags separados por coma (actual: {', '.join(pub.get('tags', []))})"))  # Pregunta por los nuevos tags
+
     if nuevo_titulo:
-        pub["titulo"] = nuevo_titulo
-    # Si se escribió nuevo contenido, se actualiza
+        pub["titulo"] = nuevo_titulo  # Actualiza el título solo si el usuario ingresó uno nuevo
     if nuevo_contenido:
-        pub["contenido"] = nuevo_contenido
-    # Si ingresaron nuevas etiquetas, aplicamos nuestro split y strip habitual para recrear el arreglo
-    if nuevos_tags_str:
-        pub["tags"] = [t.strip() for t in nuevos_tags_str.split(",") if t.strip()]
+        pub["contenido"] = nuevo_contenido  # Actualiza el contenido solo si se ingresó uno nuevo
+    if nuevos_tags:
+        pub["tags"] = nuevos_tags  # Actualiza los tags solo si se agregaron nuevos tags
 
-    mostrar_exito("Publicación modificada.")
+    mostrar_exito("Publicación modificada.")  # Informa que la publicación se actualizó correctamente
 
+
+# Elimina una publicación solo si el autor lo confirma y es el dueño.
 def eliminar_publicacion(publicaciones, usuario_actual):
-    """Ubica una publicación del autor y la borra del listado global permanentemente."""
     if not usuario_actual:
-        mostrar_error("Debes iniciar sesión para eliminar una publicación.")
+        mostrar_error("Debes iniciar sesión para eliminar una publicación.")  # No permite eliminar sin iniciar sesión
         return
 
-    # Pedimos y evaluamos que el ID post sea correcto
-    id_str = leer_input("ID de la publicación a eliminar")
-    try:
-        id_post = int(id_str)
-    except ValueError:
-        mostrar_error("El ID debe ser numérico.")
-        return
+    id_post = _parse_int(leer_input("ID de la publicación a eliminar"), "El ID debe ser numérico.")  # Lee el id de la publicación a eliminar
+    if id_post is None:
+        return  # Detiene la función si el id no es válido
 
-    # Usamos next() para localizar el diccionario de la publicación
-    pub = next((p for p in publicaciones if p.get("id_post") == id_post), None)
-
+    pub = _buscar_publicacion(publicaciones, id_post)  # Busca la publicación en la lista
     if not pub:
-        mostrar_error("Publicación no encontrada.")
+        mostrar_error("Publicación no encontrada.")  # Informa si no existe la publicación
         return
-
-    # Regla estricta: sólo el verdadero autor puede purgar un post
     if pub.get("id_autor") != usuario_actual.get("id_autor"):
-        mostrar_error("No tienes permiso para eliminar esta publicación (no es tuya).")
+        mostrar_error("No tienes permiso para eliminar esta publicación (no es tuya).")  # Verifica que el usuario sea el autor
         return
 
-    # Solicitud de verificación doble ante acciones destructivas
-    confirmacion = leer_input("¿Seguro que deseas eliminarla? (s/n)")
-    if confirmacion.lower() == 's':
-        # Removemos directamente el objeto JSON desde nuestra variable lista 'publicaciones'
-        publicaciones.remove(pub)
-        mostrar_exito("Publicación eliminada.")
+    if leer_input("¿Seguro que deseas eliminarla? (s/n)").lower() == "s":  # Confirma la decisión del usuario
+        publicaciones.remove(pub)  # Elimina la publicación de la lista
+        mostrar_exito("Publicación eliminada.")  # Informa que se borró correctamente
 
+
+# Agrega un comentario a una publicación existente.
 def comentar_publicacion(publicaciones, usuario_actual, autores):
-    """Permite buscar una publicación para que cualquier usuario, incluso invitado, le agregue un comentario."""
-    autores_dict = obtener_diccionario_autores(autores)
-    
-    # Evaluamos y casteamos el ID a número entero
-    id_str = leer_input("ID de la publicación a comentar")
-    try:
-        id_post = int(id_str)
-    except ValueError:
-        mostrar_error("El ID debe ser numérico.")
-        return
+    id_post = _parse_int(leer_input("ID de la publicación a comentar"), "El ID debe ser numérico.")  # Lee el id de la publicación a comentar
+    if id_post is None:
+        return  # Detiene la función si el id no es válido
 
-    # Ubicamos el post solicitado
-    pub = next((p for p in publicaciones if p.get("id_post") == id_post), None)
-
+    pub = _buscar_publicacion(publicaciones, id_post)  # Busca la publicación para comentar
     if not pub:
-        mostrar_error("Publicación no encontrada.")
+        mostrar_error("Publicación no encontrada.")  # Informa si no existe la publicación
         return
 
-    # Averiguamos el nombre real del creador del post usando nuestro mapeo de diccionario
-    nombre_autor = autores_dict.get(pub.get("id_autor"), "Desconocido")
-    # Desplegamos el post visualmente completo para darle contexto al usuario de qué es lo que va a comentar
-    mostrar_publicacion_completa(pub, nombre_autor)
-
-    # Requerimos el comentario que debe quedar incrustado
-    texto_comentario = leer_input("Escribe tu comentario")
+    mostrar_publicacion_completa(pub, obtener_diccionario_autores(autores).get(pub.get("id_autor"), "Desconocido"))  # Muestra la publicación antes de comentar
+    texto_comentario = leer_input("Escribe tu comentario")  # Lee el texto del comentario
     if not texto_comentario:
-        mostrar_error("El comentario no puede estar vacío.")
+        mostrar_error("El comentario no puede estar vacío.")  # No permite comentarios sin texto
         return
 
-    # Determinamos el autor del comentario: si hay sesión iniciada sacamos su nombre, si no, lo llamamos 'Invitado'
-    autor_comentario = usuario_actual.get("nombre_autor") if usuario_actual else "Invitado"
-    
-    # Creamos un bloque (diccionario) con los metadatos de este nuevo comentario
-    nuevo_comentario = {
-        "autor": autor_comentario,
-        "texto": texto_comentario,
-        "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
+    pub.setdefault("comentarios", []).append({
+        "autor": usuario_actual.get("nombre_autor") if usuario_actual else "Invitado",  # Guarda el nombre del autor que comenta
+        "texto": texto_comentario,  # Guarda el texto ingresado
+        "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # Guarda la fecha y hora del comentario
+    })
+    mostrar_exito("Comentario agregado.")  # Informa que el comentario se agregó correctamente
 
-    # Nos aseguramos de que el post tenga declarada su lista de "comentarios", si no existe, la inicializamos vacía
-    if "comentarios" not in pub:
-        pub["comentarios"] = []
-        
-    # Anidamos nuestro comentario recién forjado en el interior de los datos de la publicación original
-    pub["comentarios"].append(nuevo_comentario)
-    mostrar_exito("Comentario agregado.")
 
+# Muestra una publicación completa a partir de su id.
 def leer_publicacion(publicaciones, autores):
-    """Sirve únicamente para explorar a profundidad el contenido y el hilo de comentarios de un post seleccionado."""
-    autores_dict = obtener_diccionario_autores(autores)
-    id_str = leer_input("ID de la publicación a leer")
-    try:
-        id_post = int(id_str)
-    except ValueError:
-        mostrar_error("El ID debe ser numérico.")
-        return
+    id_post = _parse_int(leer_input("ID de la publicación a leer"), "El ID debe ser numérico.")  # Lee el id de la publicación a mostrar
+    if id_post is None:
+        return  # Detiene la función si el id ingresado no es válido
 
-    pub = next((p for p in publicaciones if p.get("id_post") == id_post), None)
-
+    pub = _buscar_publicacion(publicaciones, id_post)  # Busca la publicación solicitada
     if not pub:
-        mostrar_error("Publicación no encontrada.")
+        mostrar_error("Publicación no encontrada.")  # Informa si no existe la publicación
         return
 
-    # Usamos la UI para imprimir el objeto completo
-    nombre_autor = autores_dict.get(pub.get("id_autor"), "Desconocido")
-    mostrar_publicacion_completa(pub, nombre_autor)
+    mostrar_publicacion_completa(pub, obtener_diccionario_autores(autores).get(pub.get("id_autor"), "Desconocido"))  # Muestra la publicación completa en pantalla
